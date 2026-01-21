@@ -1,0 +1,19 @@
+// server/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model TimeEntry {
+  id          Int      @id @default(autoincrement())
+  date        DateTime // Дата виконання роботи
+  project     String   // Назва проєкту (Viso Internal, Client A...)
+  hours       Int      // Кількість годин (за умовою ціле число, але можна і Float)
+  description String   // Опис роботи
+  createdAt   DateTime @default(now()) // Технічне поле, коли створено запис
+}
