@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-// 👇 НЕ ЗАБУДЬ ПЕРЕВІРИТИ СВОЄ ПОСИЛАННЯ ТУТ
+// 👇 ТВОЄ ПОСИЛАННЯ
 const API_URL = "https://urban-space-capybara-5xvprqgj4g92wqw-3000.app.github.dev/time-entry";
 
 interface TimeEntry {
@@ -13,6 +13,12 @@ interface TimeEntry {
   description: string;
 }
 
+interface GroupedEntries {
+  date: string;
+  totalHours: number;
+  entries: TimeEntry[];
+}
+
 const PROJECTS = ["Viso Internal", "Client A", "Client B", "Personal Development"];
 
 export default function Home() {
@@ -20,11 +26,10 @@ export default function Home() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   
-  // Виправлення: hours тепер може бути рядком (""), поки ми друкуємо
   const [formData, setFormData] = useState<{
     date: string;
     project: string;
-    hours: number | string; // Дозволяємо і число, і пустий рядок
+    hours: number | string;
     description: string;
   }>({
     date: new Date().toISOString().split("T")[0],
@@ -36,7 +41,11 @@ export default function Home() {
   const fetchEntries = async () => {
     try {
       const res = await axios.get(API_URL);
-      setEntries(res.data);
+      // Сортуємо: нові дати зверху
+      const sortedData = res.data.sort((a: TimeEntry, b: TimeEntry) => 
+        new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+      setEntries(sortedData);
     } catch (err) {
       console.error("Error fetching data", err);
     }
@@ -54,7 +63,7 @@ export default function Home() {
     try {
       await axios.post(API_URL, {
         ...formData,
-        hours: Number(formData.hours), // Перед відправкою гарантуємо, що це число
+        hours: Number(formData.hours),
         date: new Date(formData.date).toISOString(),
       });
       
@@ -67,183 +76,176 @@ export default function Home() {
     }
   };
 
-  // Рахуємо суму (з перевіркою на число)
-  const totalHours = entries.reduce((sum, item) => sum + item.hours, 0);
+  // 1. Рахуємо загальну суму (Grand Total)
+  const grandTotal = entries.reduce((sum, item) => sum + item.hours, 0);
+
+  // 2. Логіка ГРУПУВАННЯ по датах
+  const groupedEntries: GroupedEntries[] = Object.values(
+    entries.reduce((acc, entry) => {
+      // Отримуємо чисту дату "YYYY-MM-DD" для ключа
+      const dateKey = new Date(entry.date).toISOString().split("T")[0];
+      
+      if (!acc[dateKey]) {
+        acc[dateKey] = { date: entry.date, totalHours: 0, entries: [] };
+      }
+      
+      acc[dateKey].entries.push(entry);
+      acc[dateKey].totalHours += entry.hours;
+      
+      return acc;
+    }, {} as Record<string, GroupedEntries>)
+  ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Сортуємо групи за датою
 
   return (
-    // Використовуємо flex та items-center для ідеального центрування по вертикалі і горизонталі
-    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 font-sans text-slate-500 flex justify-center items-start">
-      
-      {/* Зменшили ширину до max-w-4xl, щоб було компактніше і по центру */}
-      <div className="w-full max-w-4xl">
+    <div className="min-h-screen bg-slate-50 py-8 px-4 font-sans text-slate-900 flex justify-center items-start">
+      <div className="w-full max-w-lg space-y-6">
         
         {/* HEADER */}
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-extrabold text-indigo-600 tracking-tight sm:text-5xl mb-2">
+        <div className="text-center">
+          <h1 className="text-3xl font-extrabold text-indigo-600 tracking-tight mb-1">
             Viso Time Tracker
           </h1>
-          <p className="text-lg text-slate-600">
-            Log your daily activities efficiently.
+          <p className="text-sm text-slate-500">
+            Compact Mode
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+        {/* ✏️ FORM CARD */}
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-slate-100">
+          <div className="bg-indigo-600 px-5 py-3">
+            <h2 className="text-white text-base font-bold flex items-center gap-2">
+              <span>✏️</span> New Entry
+            </h2>
+          </div>
           
-          {/* 📝 LEFT COLUMN: FORM CARD */}
-          {/* Змінили пропорції колонок: тепер 5/12 форма і 7/12 історія */}
-          <div className="md:col-span-5">
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 sticky top-6">
-              <div className="bg-indigo-600 px-6 py-4">
-                <h2 className="text-white text-lg font-bold flex items-center gap-2">
-                  <span>✏️</span> New Entry
-                </h2>
+          <div className="p-5">
+            {error && (
+              <div className="mb-4 bg-red-50 border-l-4 border-red-500 text-red-700 p-3 rounded text-sm">
+                {error}
               </div>
-              
-              <div className="p-6">
-                {error && (
-                  <div className="mb-4 bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded text-sm" role="alert">
-                    <p>{error}</p>
-                  </div>
-                )}
+            )}
 
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  {/* Date Input */}
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">Date</label>
-                    <input
-                      type="date"
-                      required
-                      className="block w-full rounded-lg border-slate-300 bg-slate-50 p-2.5 text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm transition"
-                      value={formData.date}
-                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    />
-                  </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Date</label>
+                  <input
+                    type="date"
+                    required
+                    className="block w-full rounded-lg border-slate-300 bg-slate-50 p-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Hours</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="24"
+                    required
+                    className="block w-full rounded-lg border-slate-300 bg-slate-50 p-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm"
+                    value={formData.hours}
+                    onChange={(e) => {
+                       const val = e.target.value;
+                       setFormData({ ...formData, hours: val === "" ? "" : Number(val) });
+                    }}
+                  />
+                </div>
+              </div>
 
-                  {/* Project Select */}
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">Project</label>
-                    <select
-                      className="block w-full rounded-lg border-slate-300 bg-slate-50 p-2.5 text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm transition"
-                      value={formData.project}
-                      onChange={(e) => setFormData({ ...formData, project: e.target.value })}
-                    >
-                      {PROJECTS.map((p) => (
-                        <option key={p} value={p}>{p}</option>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Project</label>
+                <select
+                  className="block w-full rounded-lg border-slate-300 bg-slate-50 p-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm"
+                  value={formData.project}
+                  onChange={(e) => setFormData({ ...formData, project: e.target.value })}
+                >
+                  {PROJECTS.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1 uppercase">Description</label>
+                <textarea
+                  required
+                  rows={2}
+                  className="block w-full rounded-lg border-slate-300 bg-slate-50 p-2 text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm"
+                  placeholder="Task details..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className={`w-full py-2.5 px-4 rounded-lg text-sm font-bold text-white shadow-md transition-all
+                  ${loading ? "bg-indigo-400" : "bg-indigo-600 hover:bg-indigo-700 hover:-translate-y-0.5"}`}
+              >
+                {loading ? "Saving..." : "Save Entry"}
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {/* 📅 HISTORY LIST (GROUPED) */}
+        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-slate-100">
+          <div className="bg-slate-800 px-5 py-3 flex justify-between items-center">
+            <h2 className="text-white text-base font-bold">📅 History</h2>
+            <span className="bg-indigo-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+              Grand Total: {grandTotal}h
+            </span>
+          </div>
+
+          <div className="p-0 overflow-y-auto max-h-[500px] bg-slate-50">
+            {groupedEntries.length === 0 ? (
+              <div className="text-center text-slate-400 py-8 text-sm">
+                No entries yet.
+              </div>
+            ) : (
+              // Рендеримо групи
+              <div className="divide-y divide-slate-200">
+                {groupedEntries.map((group) => (
+                  <div key={group.date} className="bg-white">
+                    {/* 👇 ЗАГОЛОВОК ГРУПИ (ДАТА + СУМА ЗА ДЕНЬ) */}
+                    <div className="bg-slate-100 px-4 py-2 flex justify-between items-center border-b border-slate-200">
+                      <span className="text-xs font-bold text-slate-600 uppercase">
+                        {new Date(group.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </span>
+                      <span className="text-xs font-bold text-slate-500">
+                        Day Total: {group.totalHours}h
+                      </span>
+                    </div>
+
+                    {/* СПИСОК ЗАПИСІВ У ЦІЙ ГРУПІ */}
+                    <div className="divide-y divide-slate-100">
+                      {group.entries.map((entry) => (
+                        <div key={entry.id} className="p-4 hover:bg-slate-50 transition flex gap-3">
+                           {/* Content */}
+                           <div className="flex-grow min-w-0">
+                            <div className="flex justify-between items-start">
+                              <h3 className="text-sm font-bold text-slate-800 truncate">{entry.project}</h3>
+                              <span className="text-xs font-bold text-green-700 bg-green-100 px-1.5 py-0.5 rounded ml-2 whitespace-nowrap">
+                                {entry.hours}h
+                              </span>
+                            </div>
+                            <p className="text-slate-500 text-xs mt-1 line-clamp-2">
+                              {entry.description}
+                            </p>
+                          </div>
+                        </div>
                       ))}
-                    </select>
-                  </div>
-
-                  {/* Hours Input (ВИПРАВЛЕНО) */}
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">Hours Worked</label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        min="0" // Дозволяємо 0 для зручності вводу, але бекенд не пропустить < 1
-                        max="24"
-                        required
-                        className="block w-full rounded-lg border-slate-300 bg-slate-50 p-2.5 text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm transition pl-10"
-                        value={formData.hours}
-                        onChange={(e) => {
-                          // ЛОГІКА ВИПРАВЛЕННЯ:
-                          const val = e.target.value;
-                          setFormData({ 
-                            ...formData, 
-                            hours: val === "" ? "" : Number(val) // Якщо пусто -> ставимо пустий рядок, інакше число
-                          });
-                        }}
-                      />
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-slate-400">⏱️</span>
-                      </div>
                     </div>
                   </div>
-
-                  {/* Description Textarea */}
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1">Description</label>
-                    <textarea
-                      required
-                      rows={3}
-                      className="block w-full rounded-lg border-slate-300 bg-slate-50 p-2.5 text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm transition"
-                      placeholder="What did you work on?"
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    />
-                  </div>
-
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white transition-all transform hover:-translate-y-0.5
-                      ${loading 
-                        ? "bg-indigo-400 cursor-not-allowed" 
-                        : "bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-indigo-500/30"}`}
-                  >
-                    {loading ? "Saving..." : "Save Entry"}
-                  </button>
-                </form>
+                ))}
               </div>
-            </div>
+            )}
           </div>
-
-          {/* 📋 RIGHT COLUMN: HISTORY LIST */}
-          <div className="md:col-span-7">
-            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 h-full flex flex-col min-h-[400px]">
-              <div className="bg-slate-800 px-6 py-4 flex justify-between items-center">
-                <h2 className="text-white text-lg font-bold flex items-center gap-2">
-                  <span>📅</span> History
-                </h2>
-                <span className="bg-indigo-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
-                  Total: {totalHours}h
-                </span>
-              </div>
-
-              <div className="p-6 flex-1 overflow-y-auto max-h-[600px] bg-slate-50">
-                {entries.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-slate-400 py-12">
-                    <span className="text-4xl mb-2">📭</span>
-                    <p>No entries yet.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {entries.map((entry) => (
-                      <div 
-                        key={entry.id} 
-                        className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow duration-200 flex gap-4 items-start"
-                      >
-                        {/* Date Box */}
-                        <div className="flex-shrink-0 flex flex-col items-center justify-center bg-indigo-50 text-indigo-700 rounded-lg p-2 w-16 text-center border border-indigo-100">
-                          <span className="text-[10px] font-bold uppercase block tracking-tighter">
-                            {new Date(entry.date).toLocaleString('en-US', { month: 'short' })}
-                          </span>
-                          <span className="text-xl font-extrabold block leading-none">
-                            {new Date(entry.date).getDate()}
-                          </span>
-                        </div>
-
-                        {/* Content */}
-                        <div className="flex-grow min-w-0">
-                          <div className="flex justify-between items-start mb-1">
-                            <h3 className="text-sm font-bold text-slate-800 truncate pr-2">{entry.project}</h3>
-                            <span className="flex-shrink-0 bg-green-100 text-green-800 text-xs font-bold px-2 py-0.5 rounded border border-green-200">
-                              {entry.hours}h
-                            </span>
-                          </div>
-                          <p className="text-slate-600 text-sm leading-relaxed break-words">
-                            {entry.description}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
         </div>
+
       </div>
     </div>
   );
