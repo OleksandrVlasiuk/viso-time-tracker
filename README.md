@@ -42,13 +42,14 @@ npm run start:dev
 
 ### 2. Setup Frontend (Client)
 Open a terminal in the **client** folder:
-
+` ` `
 cd client
 npm install
-
+` ` `
 Start the application:
+` ` `
 npm run dev
-
+` ` `
 ---
 
 ## Project Structure
