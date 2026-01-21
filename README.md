@@ -26,48 +26,32 @@ A full-stack time tracking application developed as a test assignment for Viso A
     * **Strict Logic:** Ensures the sum of hours for a specific date never exceeds **24 hours** (Frontend & Backend validation).
 * **Responsive Design:** Modern dashboard interface optimized for different screen sizes.
 
-## 🚀 How to Run
-
-### Prerequisites
-* Node.js (v18 or higher)
-* npm
-
 ### 1. Setup Backend (Server)
-Open a terminal and navigate to the server directory:
+Open a terminal in the **server** folder:
 
-```bash
 cd server
 npm install
 
-Initialize the SQLite database:
-
-Bash
-
+Initialize the database:
 npx prisma migrate dev --name init
-Start the development server:
 
-Bash
-
+Start the server:
 npm run start:dev
-The server will start at http://localhost:3000
 
-2. Setup Frontend (Client)
-Open a new terminal window and navigate to the client directory:
+---
 
-Bash
+### 2. Setup Frontend (Client)
+Open a terminal in the **client** folder:
 
 cd client
 npm install
+
 Start the application:
-
-Bash
-
 npm run dev
-The client will start at http://localhost:3001 (or the next available port).
 
-🏗 Project Structure
-This project follows a monorepo-style structure:
+---
 
+## Project Structure
 ├── client/          # Next.js Frontend application
 │   ├── src/app/     # App Router pages and layout
 │   └── ...
@@ -77,5 +61,5 @@ This project follows a monorepo-style structure:
 │   ├── prisma/      # Database schema
 │   └── ...
 
-👤 Author
+## Author
 Developed by [Oleksandr Vlasiuk]
