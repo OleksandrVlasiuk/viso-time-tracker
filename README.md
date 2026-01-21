@@ -40,9 +40,14 @@ cd server
 npm install
 
 Initialize the SQLite database:
-npx prisma migrate dev --name init
 
+Bash
+
+npx prisma migrate dev --name init
 Start the development server:
+
+Bash
+
 npm run start:dev
 The server will start at http://localhost:3000
 
