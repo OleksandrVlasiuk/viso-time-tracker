@@ -30,6 +30,8 @@ A full-stack time tracking application developed as a test assignment for Viso A
 Open a terminal in the **server** folder:
 ```
 cd server
+```
+```
 npm install
 ```
 Initialize the database:
@@ -47,6 +49,8 @@ npm run start:dev
 Open a terminal in the **client** folder:
 ```text
 cd client
+```
+```text
 npm install
 ```
 Start the application:
