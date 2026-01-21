@@ -2,8 +2,9 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-
+// 👇 НЕ ЗАБУДЬ ПЕРЕВІРИТИ СВОЄ ПОСИЛАННЯ ТУТ
 const API_URL = "https://urban-space-capybara-5xvprqgj4g92wqw-3000.app.github.dev/time-entry";
+
 interface TimeEntry {
   id: number;
   date: string;
@@ -19,8 +20,13 @@ export default function Home() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   
-  // Початковий стан форми
-  const [formData, setFormData] = useState({
+  // Виправлення: hours тепер може бути рядком (""), поки ми друкуємо
+  const [formData, setFormData] = useState<{
+    date: string;
+    project: string;
+    hours: number | string; // Дозволяємо і число, і пустий рядок
+    description: string;
+  }>({
     date: new Date().toISOString().split("T")[0],
     project: PROJECTS[0],
     hours: 8,
@@ -48,13 +54,12 @@ export default function Home() {
     try {
       await axios.post(API_URL, {
         ...formData,
-        hours: Number(formData.hours),
+        hours: Number(formData.hours), // Перед відправкою гарантуємо, що це число
         date: new Date(formData.date).toISOString(),
       });
       
       await fetchEntries();
       setFormData({ ...formData, description: "", hours: 8 });
-      alert("Saved successfully!");
     } catch (err: any) {
       setError(err.response?.data?.message || "Error saving data");
     } finally {
@@ -62,107 +67,179 @@ export default function Home() {
     }
   };
 
+  // Рахуємо суму (з перевіркою на число)
   const totalHours = entries.reduce((sum, item) => sum + item.hours, 0);
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8 font-sans text-gray-800">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8 text-center text-blue-600">
-          ⏱️ Viso Time Tracker
-        </h1>
+    // Використовуємо flex та items-center для ідеального центрування по вертикалі і горизонталі
+    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 font-sans text-slate-500 flex justify-center items-start">
+      
+      {/* Зменшили ширину до max-w-4xl, щоб було компактніше і по центру */}
+      <div className="w-full max-w-4xl">
+        
+        {/* HEADER */}
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-extrabold text-indigo-600 tracking-tight sm:text-5xl mb-2">
+            Viso Time Tracker
+          </h1>
+          <p className="text-lg text-slate-600">
+            Log your daily activities efficiently.
+          </p>
+        </div>
 
-        <div className="grid md:grid-cols-2 gap-8">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold mb-4 border-b pb-2">New Entry</h2>
-            {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4 text-sm">
-                {error}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+          
+          {/* 📝 LEFT COLUMN: FORM CARD */}
+          {/* Змінили пропорції колонок: тепер 5/12 форма і 7/12 історія */}
+          <div className="md:col-span-5">
+            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 sticky top-6">
+              <div className="bg-indigo-600 px-6 py-4">
+                <h2 className="text-white text-lg font-bold flex items-center gap-2">
+                  <span>✏️</span> New Entry
+                </h2>
               </div>
-            )}
+              
+              <div className="p-6">
+                {error && (
+                  <div className="mb-4 bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded text-sm" role="alert">
+                    <p>{error}</p>
+                  </div>
+                )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Date</label>
-                <input
-                  type="date"
-                  required
-                  className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                />
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  {/* Date Input */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Date</label>
+                    <input
+                      type="date"
+                      required
+                      className="block w-full rounded-lg border-slate-300 bg-slate-50 p-2.5 text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm transition"
+                      value={formData.date}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    />
+                  </div>
+
+                  {/* Project Select */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Project</label>
+                    <select
+                      className="block w-full rounded-lg border-slate-300 bg-slate-50 p-2.5 text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm transition"
+                      value={formData.project}
+                      onChange={(e) => setFormData({ ...formData, project: e.target.value })}
+                    >
+                      {PROJECTS.map((p) => (
+                        <option key={p} value={p}>{p}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Hours Input (ВИПРАВЛЕНО) */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Hours Worked</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min="0" // Дозволяємо 0 для зручності вводу, але бекенд не пропустить < 1
+                        max="24"
+                        required
+                        className="block w-full rounded-lg border-slate-300 bg-slate-50 p-2.5 text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm transition pl-10"
+                        value={formData.hours}
+                        onChange={(e) => {
+                          // ЛОГІКА ВИПРАВЛЕННЯ:
+                          const val = e.target.value;
+                          setFormData({ 
+                            ...formData, 
+                            hours: val === "" ? "" : Number(val) // Якщо пусто -> ставимо пустий рядок, інакше число
+                          });
+                        }}
+                      />
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-slate-400">⏱️</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Description Textarea */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1">Description</label>
+                    <textarea
+                      required
+                      rows={3}
+                      className="block w-full rounded-lg border-slate-300 bg-slate-50 p-2.5 text-sm focus:border-indigo-500 focus:ring-indigo-500 shadow-sm transition"
+                      placeholder="What did you work on?"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    />
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white transition-all transform hover:-translate-y-0.5
+                      ${loading 
+                        ? "bg-indigo-400 cursor-not-allowed" 
+                        : "bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-indigo-500/30"}`}
+                  >
+                    {loading ? "Saving..." : "Save Entry"}
+                  </button>
+                </form>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Project</label>
-                <select
-                  className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={formData.project}
-                  onChange={(e) => setFormData({ ...formData, project: e.target.value })}
-                >
-                  {PROJECTS.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Hours</label>
-                <input
-                  type="number"
-                  min="1"
-                  max="24"
-                  required
-                  className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={formData.hours}
-                  onChange={(e) => setFormData({ ...formData, hours: Number(e.target.value) })}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Description</label>
-                <textarea
-                  required
-                  rows={3}
-                  className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={loading}
-                className={`w-full py-2 px-4 rounded text-white font-bold transition
-                  ${loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"}`}
-              >
-                {loading ? "Saving..." : "Save Entry"}
-              </button>
-            </form>
+            </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <div className="flex justify-between items-center mb-4 border-b pb-2">
-              <h2 className="text-xl font-semibold">History</h2>
-              <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">
-                Total: {totalHours}h
-              </span>
-            </div>
+          {/* 📋 RIGHT COLUMN: HISTORY LIST */}
+          <div className="md:col-span-7">
+            <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 h-full flex flex-col min-h-[400px]">
+              <div className="bg-slate-800 px-6 py-4 flex justify-between items-center">
+                <h2 className="text-white text-lg font-bold flex items-center gap-2">
+                  <span>📅</span> History
+                </h2>
+                <span className="bg-indigo-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                  Total: {totalHours}h
+                </span>
+              </div>
 
-            <div className="space-y-3 max-h-[500px] overflow-y-auto">
-              {entries.length === 0 ? (
-                <p className="text-gray-400 text-center py-4">No entries yet.</p>
-              ) : (
-                entries.map((entry) => (
-                  <div key={entry.id} className="border p-3 rounded hover:bg-gray-50 transition">
-                    <div className="flex justify-between text-sm font-bold text-gray-700">
-                      <span>{new Date(entry.date).toLocaleDateString()}</span>
-                      <span className="text-blue-600">{entry.hours}h</span>
-                    </div>
-                    <div className="text-xs text-gray-500 mb-1">{entry.project}</div>
-                    <p className="text-sm text-gray-800">{entry.description}</p>
+              <div className="p-6 flex-1 overflow-y-auto max-h-[600px] bg-slate-50">
+                {entries.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-slate-400 py-12">
+                    <span className="text-4xl mb-2">📭</span>
+                    <p>No entries yet.</p>
                   </div>
-                ))
-              )}
+                ) : (
+                  <div className="space-y-4">
+                    {entries.map((entry) => (
+                      <div 
+                        key={entry.id} 
+                        className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow duration-200 flex gap-4 items-start"
+                      >
+                        {/* Date Box */}
+                        <div className="flex-shrink-0 flex flex-col items-center justify-center bg-indigo-50 text-indigo-700 rounded-lg p-2 w-16 text-center border border-indigo-100">
+                          <span className="text-[10px] font-bold uppercase block tracking-tighter">
+                            {new Date(entry.date).toLocaleString('en-US', { month: 'short' })}
+                          </span>
+                          <span className="text-xl font-extrabold block leading-none">
+                            {new Date(entry.date).getDate()}
+                          </span>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-grow min-w-0">
+                          <div className="flex justify-between items-start mb-1">
+                            <h3 className="text-sm font-bold text-slate-800 truncate pr-2">{entry.project}</h3>
+                            <span className="flex-shrink-0 bg-green-100 text-green-800 text-xs font-bold px-2 py-0.5 rounded border border-green-200">
+                              {entry.hours}h
+                            </span>
+                          </div>
+                          <p className="text-slate-600 text-sm leading-relaxed break-words">
+                            {entry.description}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
