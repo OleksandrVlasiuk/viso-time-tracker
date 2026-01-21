@@ -62,6 +62,7 @@ npm run dev
 │   ├── src/         # Source code (Modules, Controllers, Services)
 │   ├── prisma/      # Database schema
 │   └── ...
+```
 
 ## Author
 Developed by [Oleksandr Vlasiuk]
