@@ -52,6 +52,8 @@ npm run dev
 ---
 
 ## Project Structure
+
+```text
 ├── client/          # Next.js Frontend application
 │   ├── src/app/     # App Router pages and layout
 │   └── ...
