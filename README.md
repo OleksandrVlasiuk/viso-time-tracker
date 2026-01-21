@@ -28,28 +28,31 @@ A full-stack time tracking application developed as a test assignment for Viso A
 
 ### 1. Setup Backend (Server)
 Open a terminal in the **server** folder:
-
+```
 cd server
 npm install
-
+```
 Initialize the database:
+```
 npx prisma migrate dev --name init
-
+```
 Start the server:
+```
 npm run start:dev
+```
 
 ---
 
 ### 2. Setup Frontend (Client)
 Open a terminal in the **client** folder:
-` ` `
+```text
 cd client
 npm install
-` ` `
+```
 Start the application:
-` ` `
+```
 npm run dev
-` ` `
+```
 ---
 
 ## Project Structure
